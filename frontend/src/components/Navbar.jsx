@@ -55,13 +55,13 @@ export const Navbar = ({ onMenuToggle }) => {
   if (currentUser && !isLandingPage) {
     return (
       <>
-        <header className="sticky top-0 z-30 h-16 w-full border-b border-sky-100/80 bg-white/80 backdrop-blur-xl transition-all shadow-xs">
-          <div className="flex h-full items-center justify-between px-4 sm:px-6 lg:px-7">
+        <header className="sticky top-0 z-30 h-14 sm:h-16 w-full border-b border-sky-100/80 bg-white/80 backdrop-blur-xl transition-all shadow-xs">
+          <div className="flex h-full items-center justify-between px-3 sm:px-6 lg:px-7">
             {/* Left Section: Mobile Menu + Breadcrumb / Logo */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <button
                 onClick={onMenuToggle}
-                className="rounded-xl border border-sky-100 bg-white p-2 text-slate-500 shadow-xs hover:bg-sky-50 hover:text-sky-600 md:hidden"
+                className="rounded-xl border border-sky-100 bg-white p-2 text-slate-500 shadow-xs hover:bg-sky-50 hover:text-sky-600 md:hidden shrink-0"
                 aria-label="Toggle Menu"
               >
                 {getIcon('menu', { size: 20 })}
@@ -70,10 +70,12 @@ export const Navbar = ({ onMenuToggle }) => {
               {/* Mobile Brand Link */}
               <Link
                 to={isInJourney ? `/journey/${displayJourney.id}` : '/dashboard'}
-                className="flex items-center gap-2 md:hidden"
+                className="flex items-center gap-1.5 sm:gap-2 md:hidden shrink-0"
               >
-                <img src="/logo.png" alt="MemoryMap" className="h-7 w-7 object-contain drop-shadow-xs" />
-                <span className="text-base font-extrabold text-slate-900">MemoryMap</span>
+                <img src="/logo.png" alt="MemoryMap" className="h-6 w-6 sm:h-7 sm:w-7 object-contain drop-shadow-xs shrink-0" />
+                <span className="text-sm sm:text-base font-extrabold text-slate-900 truncate max-w-[120px] sm:max-w-none">
+                  {isInJourney ? displayJourney?.journeyName : 'MemoryMap'}
+                </span>
               </Link>
 
               {/* Desktop Breadcrumb Context */}
@@ -117,7 +119,7 @@ export const Navbar = ({ onMenuToggle }) => {
             ) : null}
 
             {/* Right Section: User & Quick Actions */}
-            <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
               {currentUser?.isDemo && (
                 <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-1 text-[11px] font-bold text-amber-700 shadow-xs">
                   <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span>
@@ -137,10 +139,10 @@ export const Navbar = ({ onMenuToggle }) => {
 
               <button
                 onClick={() => navigate('/settings')}
-                className="flex items-center gap-2.5 rounded-2xl p-1 sm:px-2 sm:py-1.5 transition-colors hover:bg-sky-50 text-left"
+                className="flex items-center gap-2 rounded-2xl p-1 sm:px-2 sm:py-1.5 transition-colors hover:bg-sky-50 text-left shrink-0"
                 title="Account Settings"
               >
-                <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-sky-400 to-indigo-600 flex items-center justify-center text-white text-xs font-black shadow-xs">
+                <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-gradient-to-tr from-sky-400 to-indigo-600 flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0">
                   {currentUser.displayName ? currentUser.displayName[0].toUpperCase() : 'U'}
                 </div>
                 <div className="hidden sm:flex flex-col text-left">
@@ -151,10 +153,10 @@ export const Navbar = ({ onMenuToggle }) => {
 
               <button
                 onClick={handleLogout}
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors shrink-0"
                 title="Logout"
               >
-                {getIcon('logout', { size: 16 })}
+                {getIcon('logout', { size: 15 })}
               </button>
             </div>
           </div>
@@ -171,16 +173,16 @@ export const Navbar = ({ onMenuToggle }) => {
   // Landing Page Navbar - Static floating pill matching exact design
   return (
     <>
-      <header className="relative z-40 w-full pt-4 sm:pt-6 px-4 sm:px-6 md:px-8">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between rounded-full border border-white/80 bg-white/90 px-4 sm:px-7 shadow-[0_12px_36px_-15px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+      <header className="relative z-40 w-full pt-3 sm:pt-6 px-3 sm:px-6 md:px-8">
+        <div className="mx-auto flex h-14 sm:h-16 max-w-6xl items-center justify-between rounded-full border border-white/80 bg-white/90 px-3 sm:px-7 shadow-[0_12px_36px_-15px_rgba(15,23,42,0.12)] backdrop-blur-xl">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
+          <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0">
             <img
               src="/logo.png"
               alt="MemoryMap"
-              className="h-8.5 w-8.5 object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-xs"
+              className="h-7 w-7 sm:h-8.5 sm:w-8.5 object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-xs shrink-0"
             />
-            <span className="text-xl font-black tracking-tight text-slate-900 font-sans">
+            <span className="text-base sm:text-xl font-black tracking-tight text-slate-900 font-sans">
               Memory<span className="bg-gradient-to-r from-sky-500 via-indigo-600 to-rose-500 bg-clip-text text-transparent">Map</span>
             </span>
           </Link>
@@ -198,40 +200,42 @@ export const Navbar = ({ onMenuToggle }) => {
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {currentUser ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <Link
                   to="/dashboard"
-                  className="rounded-full bg-slate-950 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-slate-900/10 transition-all hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-1.5"
+                  className="rounded-full bg-slate-950 px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs font-bold text-white shadow-md shadow-slate-900/10 transition-all hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-1 sm:gap-1.5 whitespace-nowrap shrink-0"
                 >
-                  <span>Go to Dashboard</span>
-                  {getIcon('right', { size: 13 })}
+                  <span className="hidden sm:inline">Go to Dashboard</span>
+                  <span className="sm:hidden">Dashboard</span>
+                  {getIcon('right', { size: 12 })}
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-red-500 transition-colors"
+                  className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-red-500 transition-colors shrink-0"
                   title="Logout"
                 >
-                  {getIcon('logout', { size: 16 })}
+                  {getIcon('logout', { size: 15 })}
                 </button>
               </div>
             ) : (
-              <>
+              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                 <Link
                   to="/login"
-                  className="rounded-full px-4 py-2 text-xs font-bold text-slate-700 transition-colors hover:text-slate-950 hover:bg-slate-100"
+                  className="rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-slate-700 transition-colors hover:text-slate-950 hover:bg-slate-100 whitespace-nowrap"
                 >
                   Log In
                 </Link>
                 <Link
                   to="/signup"
-                  className="rounded-full bg-slate-950 px-5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-slate-900/10 transition-all hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-1.5"
+                  className="rounded-full bg-slate-950 px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs font-extrabold text-white shadow-md shadow-slate-900/10 transition-all hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-1 sm:gap-1.5 whitespace-nowrap"
                 >
-                  <span>Start Your Journey</span>
-                  {getIcon('right', { size: 13 })}
+                  <span className="hidden sm:inline">Start Your Journey</span>
+                  <span className="sm:hidden">Start</span>
+                  {getIcon('right', { size: 12 })}
                 </Link>
-              </>
+              </div>
             )}
           </div>
         </div>

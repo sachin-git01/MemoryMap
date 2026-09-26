@@ -200,7 +200,7 @@ export const LandingPage = () => {
             <span className="inline-block">✨</span> Map Every Single Memory
           </div>
 
-          <h1 className="mx-auto flex min-h-[4.5rem] max-w-4xl items-center justify-center text-4xl font-extrabold tracking-tight text-slate-900 sm:min-h-[5.5rem] sm:text-5xl md:min-h-[6.5rem] md:text-6xl leading-[0.98]">
+          <h1 className="mx-auto flex min-h-[4rem] sm:min-h-[5.5rem] md:min-h-[6.5rem] max-w-4xl items-center justify-center text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.1] sm:leading-[0.98] px-2">
             <span className="block" aria-label="Map Every Memory, From Love to Life">
               {headlineWords.map((word, index) => {
                 const isGradientText = index >= 3;
@@ -216,55 +216,60 @@ export const LandingPage = () => {
                     >
                       {word}
                     </span>
-                    {index === 2 ? <br className="hidden sm:inline" /> : ' '}
+                    {index === 2 ? (
+                      <>
+                        <span className="inline sm:hidden">&nbsp;</span>
+                        <br className="hidden sm:inline" />
+                      </>
+                    ) : ' '}
                   </Fragment>
                 );
               })}
             </span>
           </h1>
 
-          <p className="mx-auto mt-8 max-w-2xl text-sm sm:text-base text-slate-500/90 leading-relaxed font-medium">
+          <p className="mx-auto mt-5 sm:mt-8 max-w-2xl text-xs sm:text-base text-slate-500/90 leading-relaxed font-medium px-2">
             Bring your dates, photos, notes, and milestones together in a beautiful memory board where every checkpoint feels like a story, not just another gallery item.
           </p>
 
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-7 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full sm:w-auto px-4 sm:px-0 max-w-xs sm:max-w-none mx-auto">
             <button
               onClick={handleStart}
-              className="rounded-full bg-[#0B1530] px-8 py-3.5 text-sm font-semibold text-white shadow-xl shadow-slate-900/10 hover:bg-[#122048] hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
+              className="w-full sm:w-auto rounded-full bg-[#0B1530] px-8 py-3.5 text-sm font-semibold text-white shadow-xl shadow-slate-900/10 hover:bg-[#122048] hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2"
             >
               Start Your Journey
               {getIcon('right', { size: 16 })}
             </button>
             <button
               onClick={() => handleExploreDemo()}
-              className="rounded-full bg-white/40 px-8 py-3.5 text-sm font-semibold text-slate-700 shadow-md hover:bg-white/80 hover:-translate-y-0.5 transition-all duration-300 border border-white/60 backdrop-blur-sm"
+              className="w-full sm:w-auto rounded-full bg-white/40 px-8 py-3.5 text-sm font-semibold text-slate-700 shadow-md hover:bg-white/80 hover:-translate-y-0.5 transition-all duration-300 border border-white/60 backdrop-blur-sm"
             >
               Explore Demo
             </button>
           </div>
 
           {/* Trust Badge */}
-          <div className="mt-10 flex items-center justify-center">
-            <div className="inline-flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-slate-500 bg-slate-50/80 border border-slate-200/60 px-[1.125rem] py-2.5 rounded-full shadow-inner">
+          <div className="mt-8 sm:mt-10 flex items-center justify-center px-2">
+            <div className="inline-flex items-center gap-2 text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-slate-500 bg-slate-50/80 border border-slate-200/60 px-3 sm:px-[1.125rem] py-2 sm:py-2.5 rounded-full shadow-inner text-center">
               <span className="text-emerald-500 text-sm">✓</span> <span>100% Safe, Secure & Private Memory Journal</span>
             </div>
           </div>
         </div>
 
         {/* Memory Board Preview */}
-        <div id="preview-section" className="mt-20 scroll-mt-24 relative flex flex-col items-center">
-          <div className="w-full max-w-4xl rounded-3xl border border-white/60 bg-white/40 p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.03)] backdrop-blur-md">
+        <div id="preview-section" className="mt-14 sm:mt-20 scroll-mt-24 relative flex flex-col items-center px-1 sm:px-0 w-full">
+          <div className="w-full max-w-4xl rounded-2xl sm:rounded-3xl border border-white/60 bg-white/40 p-3 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.03)] backdrop-blur-md">
 
             {/* Preview Header */}
-            <div className="flex items-center justify-between border-b border-slate-200/40 pb-4 mb-8">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-rose-400"></div>
-                <div className="h-3 w-3 rounded-full bg-amber-400"></div>
-                <div className="h-3 w-3 rounded-full bg-sky-400"></div>
-                <span className="text-xs font-bold text-slate-400/80 ml-2 tracking-wider uppercase">Memory Board Preview</span>
+            <div className="flex items-center justify-between border-b border-slate-200/40 pb-3 sm:pb-4 mb-4 sm:mb-8">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-rose-400"></div>
+                <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-amber-400"></div>
+                <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-sky-400"></div>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-400/80 ml-1 sm:ml-2 tracking-wider uppercase truncate">Memory Board Preview</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-500/80 bg-white/50 px-3 py-1 rounded-full border border-slate-200/40">❤️ Heartfelt Theme</span>
+                <span className="text-[10px] sm:text-xs font-semibold text-slate-500/80 bg-white/50 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-slate-200/40 whitespace-nowrap">❤️ Heartfelt Theme</span>
               </div>
             </div>
 
