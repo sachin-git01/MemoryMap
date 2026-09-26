@@ -104,7 +104,39 @@ export const sendVerificationOtpEmail = async (email, otp, displayName = 'Explor
     </html>
   `;
 
-  // 1. Resend HTTPS REST API (Port 443 - Never blocked by Render free tier!)
+  // 1. Brevo (Sendinblue) HTTPS REST API (Allows sending to ANY recipient email without a custom domain!)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: {
+            name: 'MemoryMap',
+            email: (process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'sachinofficial7310@gmail.com').trim()
+          },
+          to: [{ email }],
+          subject: `${otp} is your MemoryMap verification code`,
+          htmlContent: htmlContent
+        })
+      });
+
+      const resData = await res.json();
+      if (res.ok) {
+        console.log(`[Email Service - Brevo] Real OTP email sent to ${email} (Message ID: ${resData.messageId})`);
+        return { success: true };
+      } else {
+        console.error(`[Email Service - Brevo Error]:`, resData);
+      }
+    } catch (brevoErr) {
+      console.error(`[Email Service - Brevo Fetch Error]:`, brevoErr.message);
+    }
+  }
+
+  // 2. Resend HTTPS REST API (Fallback)
   if (process.env.RESEND_API_KEY) {
     try {
       const res = await fetch('https://api.resend.com/emails', {
@@ -130,38 +162,6 @@ export const sendVerificationOtpEmail = async (email, otp, displayName = 'Explor
       }
     } catch (resendErr) {
       console.error(`[Email Service - Resend Fetch Error]:`, resendErr.message);
-    }
-  }
-
-  // 2. Brevo (Sendinblue) HTTPS REST API (Allows sending to ANY recipient email without a custom domain!)
-  if (process.env.BREVO_API_KEY) {
-    try {
-      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'api-key': process.env.BREVO_API_KEY.trim(),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sender: {
-            name: 'MemoryMap',
-            email: (process.env.EMAIL_USER || 'sachinofficial7310@gmail.com').trim()
-          },
-          to: [{ email }],
-          subject: `${otp} is your MemoryMap verification code`,
-          htmlContent: htmlContent
-        })
-      });
-
-      const resData = await res.json();
-      if (res.ok) {
-        console.log(`[Email Service - Brevo] Real OTP email sent to ${email} (Message ID: ${resData.messageId})`);
-        return { success: true };
-      } else {
-        console.error(`[Email Service - Brevo Error]:`, resData);
-      }
-    } catch (brevoErr) {
-      console.error(`[Email Service - Brevo Fetch Error]:`, brevoErr.message);
     }
   }
 
