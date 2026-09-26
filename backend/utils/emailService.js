@@ -29,10 +29,10 @@ export const isDisposableEmail = (email) => {
   return DISPOSABLE_EMAIL_DOMAINS.has(domain);
 };
 
-// Create transporter based on env variables
+// Create transporter based on env variables with strict timeouts
 const getTransporter = () => {
-  const user = process.env.EMAIL_USER || process.env.SMTP_USER;
-  const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+  const user = (process.env.EMAIL_USER || process.env.SMTP_USER || '').trim();
+  const pass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
 
   if (user && pass) {
     if (process.env.EMAIL_HOST) {
@@ -40,14 +40,20 @@ const getTransporter = () => {
         host: process.env.EMAIL_HOST,
         port: parseInt(process.env.EMAIL_PORT || '587', 10),
         secure: process.env.EMAIL_PORT === '465',
-        auth: { user, pass }
+        auth: { user, pass },
+        connectionTimeout: 4000,
+        greetingTimeout: 4000,
+        socketTimeout: 5000
       });
     }
 
-    // Default to Gmail if host not specified
+    // Default to Gmail with strict timeouts so it never hangs requests
     return nodemailer.createTransport({
       service: 'gmail',
-      auth: { user, pass }
+      auth: { user, pass },
+      connectionTimeout: 4000,
+      greetingTimeout: 4000,
+      socketTimeout: 5000
     });
   }
 
@@ -102,20 +108,29 @@ export const sendVerificationOtpEmail = async (email, otp, displayName = 'Explor
 
   if (transporter) {
     try {
-      const info = await transporter.sendMail({
+      const sendPromise = transporter.sendMail({
         from: `"MemoryMap" <${process.env.EMAIL_USER || 'no-reply@memorymap.com'}>`,
         to: email,
         subject: `${otp} is your MemoryMap verification code`,
         html: htmlContent
       });
-      console.log(`[Email Service] Verification OTP sent to ${email} (Message ID: ${info.messageId})`);
+
+      // Max 3.5s timeout so signup response NEVER hangs
+      const timeoutPromise = new Promise((resolve) =>
+        setTimeout(() => resolve({ timeout: true }), 3500)
+      );
+
+      const result = await Promise.race([sendPromise, timeoutPromise]);
+
+      if (result && result.timeout) {
+        console.warn(`[Email Service Warning] SMTP connection timed out after 3.5s for ${email}. Falling back to instant code.`);
+        return { success: false, timeout: true, fallbackOtp: otp };
+      }
+
+      console.log(`[Email Service] Verification OTP sent to ${email} (Message ID: ${result?.messageId})`);
       return { success: true };
     } catch (err) {
       console.error(`[Email Service Error] Failed to send email to ${email}:`, err.message);
-      // Fallback log in dev
-      console.log(`\n========================================`);
-      console.log(`[DEV OTP FALLBACK] Email: ${email} | OTP: ${otp}`);
-      console.log(`========================================\n`);
       return { success: false, fallbackOtp: otp, error: err.message };
     }
   } else {
