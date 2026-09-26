@@ -22,9 +22,20 @@ export const removeToken = () => {
   localStorage.removeItem(LEGACY_TOKEN_KEY);
 };
 
-const BASE_URL = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
-  : '/api';
+const getBaseUrl = () => {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  if (envUrl) {
+    const clean = envUrl.replace(/\/$/, '');
+    return clean.endsWith('/api') ? clean : `${clean}/api`;
+  }
+  // Automatic production fallback on Vercel if VITE_API_URL was not passed
+  if (typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app')) {
+    return 'https://memorymap-api-tjyd.onrender.com/api';
+  }
+  return '/api';
+};
+
+const BASE_URL = getBaseUrl();
 
 async function request(endpoint, options = {}) {
   const token = getToken();
