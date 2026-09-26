@@ -61,8 +61,6 @@ const getTransporter = () => {
 };
 
 export const sendVerificationOtpEmail = async (email, otp, displayName = 'Explorer') => {
-  const transporter = getTransporter();
-
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -105,6 +103,38 @@ export const sendVerificationOtpEmail = async (email, otp, displayName = 'Explor
       </body>
     </html>
   `;
+
+  // 1. Resend HTTPS REST API (Port 443 - Never blocked by Render free tier!)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: process.env.EMAIL_FROM || 'MemoryMap <onboarding@resend.dev>',
+          to: [email],
+          subject: `${otp} is your MemoryMap verification code`,
+          html: htmlContent
+        })
+      });
+
+      const resData = await res.json();
+      if (res.ok) {
+        console.log(`[Email Service - Resend] Real OTP email sent to ${email} (ID: ${resData.id})`);
+        return { success: true };
+      } else {
+        console.error(`[Email Service - Resend Error]:`, resData);
+      }
+    } catch (resendErr) {
+      console.error(`[Email Service - Resend Fetch Error]:`, resendErr.message);
+    }
+  }
+
+  // 2. SMTP Transporter fallback
+  const transporter = getTransporter();
 
   if (transporter) {
     try {
