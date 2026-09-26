@@ -69,12 +69,6 @@ export const OtpVerificationCard = ({ email, devOtp, onVerified, onCancel }) => 
     }
   };
 
-  const handleAutofillDev = () => {
-    if (devOtp) {
-      setOtp(devOtp);
-      setError('');
-    }
-  };
 
   return (
     <div className="glass-card rounded-3xl border border-slate-200/60 bg-white/95 p-8 shadow-xl text-center">
@@ -94,22 +88,9 @@ export const OtpVerificationCard = ({ email, devOtp, onVerified, onCancel }) => 
         <span className="truncate max-w-[220px]">{email}</span>
       </div>
 
-      {/* Dev helper badge if available */}
-      {devOtp && (
-        <div className="mt-3.5 inline-flex flex-col items-center gap-1 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-2 text-[11px] font-semibold text-amber-800">
-          <span className="flex items-center gap-1">
-            <span>⚡</span>
-            <span>Test / Local Code: <strong className="font-mono text-sm tracking-wider font-extrabold text-amber-900">{devOtp}</strong></span>
-          </span>
-          <button
-            type="button"
-            onClick={handleAutofillDev}
-            className="text-[10px] font-bold text-amber-700 underline hover:text-amber-900 cursor-pointer"
-          >
-            Click to auto-fill code
-          </button>
-        </div>
-      )}
+      <p className="mt-2 text-[11px] text-slate-400 font-medium">
+        (Please check your <strong>Spam / Junk</strong> folder if not visible in Inbox)
+      </p>
 
       {/* Alerts */}
       {error && (
