@@ -133,7 +133,39 @@ export const sendVerificationOtpEmail = async (email, otp, displayName = 'Explor
     }
   }
 
-  // 2. SMTP Transporter fallback
+  // 2. Brevo (Sendinblue) HTTPS REST API (Allows sending to ANY recipient email without a custom domain!)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: {
+            name: 'MemoryMap',
+            email: (process.env.EMAIL_USER || 'sachinofficial7310@gmail.com').trim()
+          },
+          to: [{ email }],
+          subject: `${otp} is your MemoryMap verification code`,
+          htmlContent: htmlContent
+        })
+      });
+
+      const resData = await res.json();
+      if (res.ok) {
+        console.log(`[Email Service - Brevo] Real OTP email sent to ${email} (Message ID: ${resData.messageId})`);
+        return { success: true };
+      } else {
+        console.error(`[Email Service - Brevo Error]:`, resData);
+      }
+    } catch (brevoErr) {
+      console.error(`[Email Service - Brevo Fetch Error]:`, brevoErr.message);
+    }
+  }
+
+  // 3. SMTP Transporter fallback
   const transporter = getTransporter();
 
   if (transporter) {
