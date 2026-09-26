@@ -24,19 +24,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please add a password'],
       minlength: [6, 'Password must be at least 6 characters']
-    },
-    isVerified: {
-      type: Boolean,
-      default: false
-    },
-    verificationOtp: {
-      type: String
-    },
-    verificationOtpExpires: {
-      type: Date
-    },
-    otpResendCooldown: {
-      type: Date
     }
   },
   {
@@ -63,7 +50,6 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
   delete userObject.password;
-  delete userObject.verificationOtp;
   return userObject;
 };
 

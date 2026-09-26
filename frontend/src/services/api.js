@@ -84,14 +84,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
-    verifyOtp: (payload) => request('/auth/verify-otp', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    }),
-    resendOtp: (payload) => request('/auth/resend-otp', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    }),
     login: (payload) => request('/auth/login', {
       method: 'POST',
       body: JSON.stringify(payload)

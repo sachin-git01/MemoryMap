@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getIcon } from '../utils/icons';
-import { OtpVerificationCard } from '../components/OtpVerificationCard';
 
 const REMEMBER_EMAIL_KEY = 'memorymap_remembered_email';
 
@@ -13,8 +12,6 @@ export const LoginPage = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [verifyingEmail, setVerifyingEmail] = useState('');
-  const [devOtp, setDevOtp] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -46,33 +43,10 @@ export const LoginPage = () => {
       navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error(err);
-      if (err.requiresVerification) {
-        setVerifyingEmail(err.email || email.trim());
-        setDevOtp(err.devOtp || '');
-      } else {
-        setError(err.message || "Failed to log in. Please check your credentials.");
-      }
+      setError(err.message || "Failed to log in. Please check your credentials.");
       setLoading(false);
     }
   };
-
-  if (verifyingEmail) {
-    return (
-      <div className="page-enter relative flex min-h-screen items-center justify-center bg-gradient-to-tr from-sky-50 via-white to-rose-50 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 journey-grid-bg opacity-20"></div>
-        <div className="absolute right-[20%] top-[20%] h-80 w-80 rounded-full bg-theme-primary/10 blur-[100px] animate-pulse-slow"></div>
-
-        <div className="auth-card-enter relative w-full max-w-md">
-          <OtpVerificationCard
-            email={verifyingEmail}
-            devOtp={devOtp}
-            onVerified={() => navigate('/dashboard', { replace: true })}
-            onCancel={() => setVerifyingEmail('')}
-          />
-        </div>
-      </div>
-    );
-  }
 
   const handleDemoLogin = async () => {
     setError('');
@@ -100,13 +74,13 @@ export const LoginPage = () => {
         </Link>
 
         <div className="glass-card rounded-3xl border border-slate-200/60 bg-white/95 p-8 shadow-xl">
-          <div className="mb-8 text-center">
+          <div className="mb-6 text-center">
             <img src="/logo.png" alt="MemoryMap" className="mx-auto h-12 w-12 object-contain drop-shadow-sm" />
             <h2 className="mt-4 text-2xl font-extrabold text-slate-900 font-sans">
-              Welcome back
+              Welcome Back
             </h2>
             <p className="mt-1.5 text-xs font-medium text-slate-500 font-sans">
-              Log in to continue building your private memory journeys.
+              Log in to access your memory maps and moments.
             </p>
           </div>
 
@@ -122,17 +96,19 @@ export const LoginPage = () => {
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
                 Email Address
               </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (error) setError('');
-                }}
-                placeholder="you@example.com"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-800 outline-none transition-all focus:border-theme-primary focus:bg-white focus:ring-2 focus:ring-theme-primary/10"
-              />
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  {getIcon('mail', { size: 17 })}
+                </div>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-theme-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-sans"
+                />
+              </div>
             </div>
 
             <div>
@@ -140,35 +116,34 @@ export const LoginPage = () => {
                 Password
               </label>
               <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  {getIcon('lock', { size: 17 })}
+                </div>
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  placeholder="••••••••"
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (error) setError('');
-                  }}
-                  placeholder="Enter password"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-xs font-medium text-slate-800 outline-none transition-all focus:border-theme-primary focus:bg-white focus:ring-2 focus:ring-theme-primary/10"
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-theme-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-sans"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(prev => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600"
                 >
-                  {getIcon(showPassword ? 'eyeoff' : 'eye', { size: 16 })}
+                  {getIcon(showPassword ? 'eyeOff' : 'eye', { size: 17 })}
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs font-medium text-slate-500">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
+            <div className="flex items-center justify-between text-xs pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-slate-600 font-medium">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                 />
                 Remember email
               </label>
@@ -177,14 +152,17 @@ export const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3.5 text-xs font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-lg disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-80"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-slate-900/10 transition-all hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:pointer-events-none font-sans"
             >
               {loading ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                  <span>Logging in...</span>
+                </>
               ) : (
                 <>
-                  Log In
-                  {getIcon('right', { size: 14 })}
+                  <span>Log In</span>
+                  {getIcon('right', { size: 16 })}
                 </>
               )}
             </button>
@@ -192,28 +170,29 @@ export const LoginPage = () => {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-100"></div>
+              <div className="w-full border-t border-slate-200"></div>
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-3 text-[10px] font-bold text-slate-400">or</span>
+              <span className="bg-white px-3 text-slate-400 font-bold">Or</span>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={handleDemoLogin}
             disabled={loading}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-3 text-xs font-bold text-slate-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-80"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-700 shadow-xs transition-all hover:bg-slate-50 hover:text-slate-950 hover:border-slate-300 font-sans"
           >
-            {getIcon('star', { size: 14 })}
-            Explore in Demo Mode
+            <span>✨</span>
+            <span>Instant Demo Mode (1-Click)</span>
           </button>
 
-          <p className="mt-8 text-center text-xs font-semibold text-slate-500 font-sans">
-            Don't have a private account?{' '}
-            <Link to="/signup" className="font-bold text-theme-primary transition-colors hover:text-theme-accent">
+          <div className="mt-6 text-center text-xs font-semibold text-slate-500">
+            Don't have an account?{' '}
+            <Link to="/signup" className="text-theme-primary font-bold hover:underline">
               Create an account
             </Link>
-          </p>
+          </div>
         </div>
       </div>
     </div>

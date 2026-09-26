@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  // Signup
+  // Direct JWT Signup
   const signup = async (email, password, displayName) => {
     try {
       const res = await api.auth.register({
@@ -78,15 +78,6 @@ export const AuthProvider = ({ children }) => {
         email: email.trim().toLowerCase(),
         password
       });
-
-      if (res?.requiresVerification) {
-        return {
-          requiresVerification: true,
-          email: res.email,
-          devOtp: res.devOtp,
-          message: res.message
-        };
-      }
 
       if (res?.success && res.token && res.user) {
         setToken(res.token);
@@ -104,40 +95,6 @@ export const AuthProvider = ({ children }) => {
       throw new Error(res?.message || 'Failed to create account');
     } catch (err) {
       console.error('[Auth Signup Error]:', err);
-      throw err;
-    }
-  };
-
-  // Verify OTP
-  const verifyOtp = async (email, otp) => {
-    try {
-      const res = await api.auth.verifyOtp({ email, otp });
-      if (res?.success && res.token && res.user) {
-        setToken(res.token);
-        localStorage.removeItem(DEMO_USER_KEY);
-
-        const realUser = {
-          uid: res.user.uid,
-          displayName: res.user.displayName,
-          email: res.user.email,
-          isDemo: false
-        };
-        setCurrentUser(realUser);
-        return realUser;
-      }
-      throw new Error(res?.message || 'Verification failed');
-    } catch (err) {
-      console.error('[Auth Verify OTP Error]:', err);
-      throw err;
-    }
-  };
-
-  // Resend OTP
-  const resendOtp = async (email) => {
-    try {
-      return await api.auth.resendOtp({ email });
-    } catch (err) {
-      console.error('[Auth Resend OTP Error]:', err);
       throw err;
     }
   };
@@ -229,8 +186,6 @@ export const AuthProvider = ({ children }) => {
     loading,
     isDemoMode: Boolean(currentUser?.isDemo),
     signup,
-    verifyOtp,
-    resendOtp,
     login,
     logout,
     updateUserProfile

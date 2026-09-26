@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getIcon } from '../utils/icons';
-import { OtpVerificationCard } from '../components/OtpVerificationCard';
 
 export const SignupPage = () => {
   const [name, setName] = useState('');
@@ -13,8 +12,6 @@ export const SignupPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [verifyingEmail, setVerifyingEmail] = useState('');
-  const [devOtp, setDevOtp] = useState('');
   const { signup } = useAuth();
   const navigate = useNavigate();
 
@@ -37,38 +34,14 @@ export const SignupPage = () => {
     setLoading(true);
 
     try {
-      const res = await signup(email, password, name);
-      if (res?.requiresVerification) {
-        setVerifyingEmail(res.email);
-        setDevOtp(res.devOtp || '');
-        setLoading(false);
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      await signup(email, password, name);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to create account. Please try again.");
       setLoading(false);
     }
   };
-
-  if (verifyingEmail) {
-    return (
-      <div className="page-enter relative flex min-h-screen items-center justify-center bg-gradient-to-tr from-sky-50 via-white to-rose-50 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 journey-grid-bg opacity-20"></div>
-        <div className="absolute left-[15%] bottom-[15%] h-80 w-80 rounded-full bg-theme-primary/10 blur-[100px] animate-pulse-slow"></div>
-
-        <div className="auth-card-enter relative w-full max-w-md">
-          <OtpVerificationCard
-            email={verifyingEmail}
-            devOtp={devOtp}
-            onVerified={() => navigate('/dashboard', { replace: true })}
-            onCancel={() => setVerifyingEmail('')}
-          />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="page-enter relative flex min-h-screen items-center justify-center bg-gradient-to-tr from-sky-50 via-white to-rose-50 px-4 py-12 sm:px-6 lg:px-8">
@@ -104,126 +77,128 @@ export const SignupPage = () => {
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
                 Full Name
               </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  if (error) setError('');
-                }}
-                placeholder="Jane Doe"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-800 outline-none transition-all focus:border-theme-primary focus:bg-white focus:ring-2 focus:ring-theme-primary/10"
-              />
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  {getIcon('user', { size: 17 })}
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Alex River"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-theme-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-sans"
+                />
+              </div>
             </div>
 
             <div>
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
                 Email Address
               </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (error) setError('');
-                }}
-                placeholder="jane@example.com"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-800 outline-none transition-all focus:border-theme-primary focus:bg-white focus:ring-2 focus:ring-theme-primary/10"
-              />
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  {getIcon('mail', { size: 17 })}
+                </div>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-theme-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-sans"
+                />
+              </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                  Password
-                </label>
-                {password && (
-                  <span className={`text-[10px] font-bold ${isPasswordValid ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {isPasswordValid ? '✓ Minimum length met' : 'Min 6 characters'}
-                  </span>
-                )}
-              </div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
+                Password
+              </label>
               <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  {getIcon('lock', { size: 17 })}
+                </div>
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  placeholder="Min. 6 characters"
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (error) setError('');
-                  }}
-                  placeholder="Min 6 characters"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-xs font-medium text-slate-800 outline-none transition-all focus:border-theme-primary focus:bg-white focus:ring-2 focus:ring-theme-primary/10"
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-theme-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-sans"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(prev => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600"
                 >
-                  {getIcon(showPassword ? 'eyeoff' : 'eye', { size: 16 })}
+                  {getIcon(showPassword ? 'eyeOff' : 'eye', { size: 17 })}
                 </button>
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                  Confirm Password
-                </label>
-                {confirmPassword && (
-                  <span className={`text-[10px] font-bold ${isMatch ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {isMatch ? '✓ Passwords match' : 'Passwords do not match'}
-                  </span>
-                )}
-              </div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
+                Confirm Password
+              </label>
               <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  {getIcon('lock', { size: 17 })}
+                </div>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   required
+                  placeholder="Re-type your password"
                   value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    if (error) setError('');
-                  }}
-                  placeholder="Confirm password"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-xs font-medium text-slate-800 outline-none transition-all focus:border-theme-primary focus:bg-white focus:ring-2 focus:ring-theme-primary/10"
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-theme-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-sans"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(prev => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600"
                 >
-                  {getIcon(showConfirmPassword ? 'eyeoff' : 'eye', { size: 16 })}
+                  {getIcon(showConfirmPassword ? 'eyeOff' : 'eye', { size: 17 })}
                 </button>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs text-slate-500 font-medium pt-1">
+              <div className="flex items-center gap-1.5">
+                <span className={isPasswordValid ? "text-emerald-500" : "text-slate-300"}>●</span>
+                <span>At least 6 characters</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={isMatch ? "text-emerald-500" : "text-slate-300"}>●</span>
+                <span>Passwords match</span>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3.5 text-xs font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-lg disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-80"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-slate-900/10 transition-all hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:pointer-events-none font-sans"
             >
               {loading ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                  <span>Creating Account...</span>
+                </>
               ) : (
                 <>
-                  Create Private Account
-                  {getIcon('right', { size: 14 })}
+                  <span>Create Account</span>
+                  {getIcon('right', { size: 16 })}
                 </>
               )}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs font-semibold text-slate-500 font-sans">
+          <div className="mt-6 text-center text-xs font-semibold text-slate-500">
             Already have an account?{' '}
-            <Link to="/login" className="font-bold text-theme-primary transition-colors hover:text-theme-accent">
-              Log In
+            <Link to="/login" className="text-theme-primary font-bold hover:underline">
+              Log in
             </Link>
-          </p>
+          </div>
         </div>
       </div>
     </div>
