@@ -71,7 +71,6 @@ async function request(endpoint, options = {}) {
     err.status = response.status;
     err.requiresVerification = Boolean(data?.requiresVerification);
     err.email = data?.email;
-    err.devOtp = data?.devOtp;
     throw err;
   }
 

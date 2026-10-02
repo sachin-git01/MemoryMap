@@ -81,13 +81,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/', (_req, res) => {
   res.json({
     success: true,
-    message: 'PhotoFlow Backend API is secured and running',
-    frontendUrl: 'http://localhost:5173',
+    message: 'MemoryMap Backend API is secured and running',
     endpoints: {
       health: '/api/health',
       auth: {
         register: 'POST /api/auth/register',
+        verifyOtp: 'POST /api/auth/verify-registration-otp',
         login: 'POST /api/auth/login',
+        forgotPassword: 'POST /api/auth/forgot-password',
+        resetPassword: 'POST /api/auth/reset-password',
         me: 'GET /api/auth/me'
       },
       upload: 'POST /api/upload',
@@ -105,7 +107,7 @@ app.get('/', (_req, res) => {
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
-    message: 'PhotoFlow API server is healthy',
+    message: 'MemoryMap API server is healthy',
     timestamp: new Date().toISOString()
   });
 });
@@ -121,5 +123,5 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`[PhotoFlow Server] Running securely on http://localhost:${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log(`[MemoryMap Server] Running securely on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });
