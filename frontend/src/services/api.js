@@ -80,19 +80,27 @@ async function request(endpoint, options = {}) {
 
 export const api = {
   auth: {
-    sendOtp: (payload) => request('/auth/send-otp', {
+    register: (payload) => request('/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
-    verifyOtp: (payload) => request('/auth/verify-otp', {
+    verifyRegistrationOtp: (payload) => request('/auth/verify-registration-otp', {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
-    resendOtp: (payload) => request('/auth/resend-otp', {
+    resendRegistrationOtp: (payload) => request('/auth/resend-registration-otp', {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
     login: (payload) => request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+    forgotPassword: (payload) => request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+    resetPassword: (payload) => request('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(payload)
     }),

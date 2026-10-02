@@ -22,13 +22,23 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: false,
+      required: [true, 'Please add a password'],
       minlength: [6, 'Password must be at least 6 characters']
     },
-    loginOtp: {
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    verificationOtp: {
       type: String
     },
-    loginOtpExpires: {
+    verificationOtpExpires: {
+      type: Date
+    },
+    resetPasswordOtp: {
+      type: String
+    },
+    resetPasswordOtpExpires: {
       type: Date
     },
     otpResendCooldown: {
@@ -40,9 +50,9 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Hash password before saving if present
+// Hash password before saving if modified
 userSchema.pre('save', async function (next) {
-  if (!this.password || !this.isModified('password')) {
+  if (!this.isModified('password')) {
     return next();
   }
   const salt = await bcrypt.genSalt(10);
@@ -56,11 +66,14 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Omit password and OTP from JSON serialization
+// Omit password and sensitive OTPs from JSON serialization
 userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
   delete userObject.password;
-  delete userObject.loginOtp;
+  delete userObject.verificationOtp;
+  delete userObject.verificationOtpExpires;
+  delete userObject.resetPasswordOtp;
+  delete userObject.resetPasswordOtpExpires;
   return userObject;
 };
 

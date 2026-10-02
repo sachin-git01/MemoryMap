@@ -4,9 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { getIcon } from '../utils/icons';
 
 export const SignupPage = () => {
-  const [step, setStep] = useState(1); // 1 = Details, 2 = OTP
+  const [step, setStep] = useState(1); // 1 = Registration Form (Name, Email, Password), 2 = 6-digit OTP verification
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -14,7 +17,7 @@ export const SignupPage = () => {
   const [cooldown, setCooldown] = useState(0);
 
   const otpInputRef = useRef(null);
-  const { sendOtp, verifyOtp, resendOtp, loginDemo } = useAuth();
+  const { signup, verifySignupOtp, resendSignupOtp } = useAuth();
   const navigate = useNavigate();
 
   // Cooldown countdown timer
@@ -33,14 +36,19 @@ export const SignupPage = () => {
     }
   }, [step]);
 
-  // Step 1: Send OTP with Display Name
-  const handleSendOtp = async (e) => {
-    e?.preventDefault();
-    const trimmedName = name.trim();
-    const trimmedEmail = email.trim().toLowerCase();
+  // Step 1: Submit Registration Form (Password + Email) -> Brevo sends OTP
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    if (!name || !email || !password || !confirmPassword) {
+      return setError('Please fill in all fields.');
+    }
 
-    if (!trimmedEmail || !trimmedEmail.includes('@')) {
-      return setError('Please enter a valid email address.');
+    if (password.length < 6) {
+      return setError('Password must be at least 6 characters long.');
+    }
+
+    if (password !== confirmPassword) {
+      return setError('Passwords do not match.');
     }
 
     setError('');
@@ -48,12 +56,12 @@ export const SignupPage = () => {
     setLoading(true);
 
     try {
-      const res = await sendOtp(trimmedEmail, trimmedName);
-      setSuccessMsg(res?.message || 'Verification code sent! Check your inbox.');
+      const res = await signup(name, email, password);
+      setSuccessMsg(res?.message || 'Verification code sent to your email!');
       setStep(2);
       setCooldown(60);
     } catch (err) {
-      setError(err?.data?.message || err.message || 'Failed to send verification code. Please try again.');
+      setError(err?.data?.message || err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -71,7 +79,7 @@ export const SignupPage = () => {
     setLoading(true);
 
     try {
-      await verifyOtp(email, cleanOtp);
+      await verifySignupOtp(email, cleanOtp);
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err?.data?.message || err.message || 'Invalid or expired code. Please try again.');
@@ -87,7 +95,7 @@ export const SignupPage = () => {
     setLoading(true);
 
     try {
-      const res = await resendOtp(email);
+      const res = await resendSignupOtp(email);
       setSuccessMsg(res?.message || 'A fresh code was sent to your email.');
       setCooldown(60);
       setOtp('');
@@ -112,17 +120,31 @@ export const SignupPage = () => {
         <div className="glass-card rounded-3xl border border-slate-200/60 bg-white/95 p-8 shadow-xl backdrop-blur-md">
           {/* Header */}
           <div className="mb-6 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-500 to-indigo-600 text-white shadow-lg shadow-rose-500/20">
-              {getIcon('user', { size: 28 })}
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
+              {step === 1 ? getIcon('user', { size: 28 }) : getIcon('mail', { size: 28 })}
             </div>
             <h2 className="mt-4 text-2xl font-extrabold text-slate-900 font-sans tracking-tight">
-              {step === 1 ? 'Create Your Account' : 'Confirm Your Email'}
+              {step === 1 ? 'Create Your Account' : 'Verify Your Email'}
             </h2>
             <p className="mt-1.5 text-xs font-medium text-slate-500 font-sans">
               {step === 1
-                ? 'Join MemoryMap without passwords. Fast & secure OTP verification.'
-                : `Enter the 6-digit code sent to ${email}`}
+                ? 'Sign up with your email and password. We will send an OTP to verify your account.'
+                : `Enter the 6-digit code sent to:`}
             </p>
+            {step === 2 && (
+              <div className="mt-1 flex items-center justify-center gap-2">
+                <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
+                  {email}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setStep(1); setOtp(''); setError(''); }}
+                  className="text-xs font-semibold text-theme-primary hover:underline"
+                >
+                  Change
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Feedback Messages */}
@@ -140,12 +162,12 @@ export const SignupPage = () => {
             </div>
           )}
 
-          {/* Step 1: Details */}
+          {/* Step 1: Registration Form with Name, Email & Password */}
           {step === 1 && (
-            <form onSubmit={handleSendOtp} className="space-y-4">
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
-                  Your Name
+                  Full Name
                 </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
@@ -181,6 +203,51 @@ export const SignupPage = () => {
                 </div>
               </div>
 
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    {getIcon('lock', { size: 17 })}
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder="Min. 6 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-theme-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-sans"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600"
+                  >
+                    {getIcon(showPassword ? 'eyeOff' : 'eye', { size: 17 })}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    {getIcon('lock', { size: 17 })}
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder="Re-enter password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-theme-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-sans"
+                  />
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -189,11 +256,11 @@ export const SignupPage = () => {
                 {loading ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                    <span>Sending Code...</span>
+                    <span>Sending Verification Code...</span>
                   </>
                 ) : (
                   <>
-                    <span>Send Verification Code</span>
+                    <span>Create Account & Send OTP</span>
                     {getIcon('right', { size: 16 })}
                   </>
                 )}
@@ -201,7 +268,7 @@ export const SignupPage = () => {
             </form>
           )}
 
-          {/* Step 2: OTP Form */}
+          {/* Step 2: 6-Digit OTP Form */}
           {step === 2 && (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div>
@@ -223,7 +290,7 @@ export const SignupPage = () => {
                       setOtp(val);
                       if (val.length === 6) {
                         setTimeout(() => {
-                          const submitBtn = document.getElementById('signup-verify-otp-btn');
+                          const submitBtn = document.getElementById('signup-verify-btn');
                           if (submitBtn) submitBtn.click();
                         }, 50);
                       }
@@ -232,12 +299,12 @@ export const SignupPage = () => {
                   />
                 </div>
                 <p className="mt-2 text-center text-[11px] text-slate-400">
-                  Please check your inbox or Spam/Junk folder.
+                  Didn't receive it? Check your Spam or Junk folder.
                 </p>
               </div>
 
               <button
-                id="signup-verify-otp-btn"
+                id="signup-verify-btn"
                 type="submit"
                 disabled={loading || otp.length !== 6}
                 className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-slate-900/10 transition-all hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:pointer-events-none font-sans"
@@ -249,7 +316,7 @@ export const SignupPage = () => {
                   </>
                 ) : (
                   <>
-                    <span>Complete Sign Up</span>
+                    <span>Verify & Enter Dashboard</span>
                     {getIcon('check', { size: 16 })}
                   </>
                 )}
@@ -275,9 +342,9 @@ export const SignupPage = () => {
           )}
 
           <div className="mt-6 text-center text-xs font-semibold text-slate-500">
-            Already have an account?{' '}
+            Already registered?{' '}
             <Link to="/login" className="text-theme-primary font-bold hover:underline">
-              Sign in
+              Log in with Password
             </Link>
           </div>
         </div>

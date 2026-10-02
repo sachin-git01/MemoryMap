@@ -1,9 +1,11 @@
 import express from 'express';
 import {
-  sendLoginOtp,
-  verifyLoginOtp,
-  resendLoginOtp,
+  registerUser,
+  verifyRegistrationOtp,
+  resendRegistrationOtp,
   loginUser,
+  forgotPassword,
+  resetPassword,
   getMe,
   updateUserProfile
 } from '../controllers/authController.js';
@@ -12,10 +14,19 @@ import { authLimiter } from '../middleware/rateLimitMiddleware.js';
 
 const router = express.Router();
 
-router.post('/send-otp', authLimiter, sendLoginOtp);
-router.post('/verify-otp', authLimiter, verifyLoginOtp);
-router.post('/resend-otp', authLimiter, resendLoginOtp);
+// Registration & Email Verification (with OTP)
+router.post('/register', authLimiter, registerUser);
+router.post('/verify-registration-otp', authLimiter, verifyRegistrationOtp);
+router.post('/resend-registration-otp', authLimiter, resendRegistrationOtp);
+
+// Standard Login (Email + Password only, NO OTP)
 router.post('/login', authLimiter, loginUser);
+
+// Password Reset (with OTP)
+router.post('/forgot-password', authLimiter, forgotPassword);
+router.post('/reset-password', authLimiter, resetPassword);
+
+// Profile
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateUserProfile);
 

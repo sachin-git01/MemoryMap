@@ -219,37 +219,120 @@ export const AccountSettingsPage = () => {
         </form>
       </div>
 
-      {/* Passwordless Security Info */}
+      {/* Change Password Form */}
       <div className="rounded-3xl border border-sky-100 bg-white/[0.85] p-6 sm:p-8 shadow-sm backdrop-blur-xl">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-theme-primary">
-            {getIcon('shield', { size: 20 }) || getIcon('lock', { size: 20 })}
-          </div>
-          <div>
-            <h3 className="text-base font-extrabold text-blue-950">
-              Passwordless Security & OTP
-            </h3>
-            <p className="text-xs font-medium text-slate-500">
-              Safe, modern authentication protected by one-time codes.
-            </p>
-          </div>
-        </div>
+        <h3 className="text-base font-extrabold text-blue-950">
+          Security & Password
+        </h3>
+        <p className="mt-1 text-xs font-medium text-slate-500">
+          Ensure your account uses a strong, secure password.
+        </p>
 
-        <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/80 p-5">
-          <div className="flex items-start gap-3">
-            <div className="text-emerald-500 mt-0.5">
-              {getIcon('check', { size: 18 })}
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-800">
-                OTP-Based Authentication Active
-              </h4>
-              <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                Your account is protected by instant 6-digit verification codes sent directly to <strong>{currentUser?.email || 'your email'}</strong> every time you sign in. You never have to worry about weak, stolen, or forgotten passwords.
-              </p>
-            </div>
+        {isDemoMode ? (
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
+            <p className="text-xs font-bold text-slate-600">
+              Password management is not applicable in Demo Mode.
+            </p>
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              Create a free private account to set up password security.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/signup')}
+              className="mt-4 rounded-xl bg-blue-950 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm hover:bg-blue-900"
+            >
+              Sign Up for Private Account
+            </button>
           </div>
-        </div>
+        ) : (
+          <form onSubmit={handleUpdatePassword} className="mt-6 space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Current Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="w-full rounded-xl border border-sky-100 bg-slate-50/70 px-4 py-3 pr-10 text-xs font-semibold text-slate-800 outline-none transition-all focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(prev => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                >
+                  {getIcon(showCurrentPassword ? 'eyeOff' : 'eye', { size: 16 })}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  New Password
+                </label>
+                {newPassword && (
+                  <span className={`text-[10px] font-bold ${isNewPasswordValid ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {isNewPasswordValid ? '✓ Minimum length met' : 'Min 6 characters'}
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min 6 characters"
+                  className="w-full rounded-xl border border-sky-100 bg-slate-50/70 px-4 py-3 pr-10 text-xs font-semibold text-slate-800 outline-none transition-all focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(prev => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label={showNewPassword ? "Hide password" : "Show password"}
+                >
+                  {getIcon(showNewPassword ? 'eyeOff' : 'eye', { size: 16 })}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Confirm New Password
+                </label>
+                {confirmPassword && (
+                  <span className={`text-[10px] font-bold ${isMatch ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {isMatch ? '✓ Passwords match' : 'Passwords do not match'}
+                  </span>
+                )}
+              </div>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className="w-full rounded-xl border border-sky-100 bg-slate-50/70 px-4 py-3 text-xs font-semibold text-slate-800 outline-none transition-all focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
+              />
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="submit"
+                disabled={passwordSaving}
+                className="rounded-xl bg-blue-950 px-6 py-3 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {passwordSaving ? 'Updating Password...' : 'Update Password'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

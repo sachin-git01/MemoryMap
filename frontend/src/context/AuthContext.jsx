@@ -70,17 +70,24 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  // Send OTP
-  const sendOtp = async (email, displayName) => {
+  // 1. Signup with Name, Email & Password (Triggers 6-Digit OTP to Email)
+  const signup = async (displayName, email, password) => {
     const trimmedEmail = email.trim().toLowerCase();
-    const res = await api.auth.sendOtp({ email: trimmedEmail, displayName });
+    const res = await api.auth.register({
+      displayName: displayName.trim(),
+      email: trimmedEmail,
+      password
+    });
     return res;
   };
 
-  // Verify OTP & Log In
-  const verifyOtp = async (email, otp) => {
+  // 2. Verify Signup OTP (Activates Account & Generates JWT Token)
+  const verifySignupOtp = async (email, otp) => {
     const trimmedEmail = email.trim().toLowerCase();
-    const res = await api.auth.verifyOtp({ email: trimmedEmail, otp: otp.trim() });
+    const res = await api.auth.verifyRegistrationOtp({
+      email: trimmedEmail,
+      otp: otp.trim()
+    });
 
     if (res?.success && res.token && res.user) {
       setToken(res.token);
@@ -98,37 +105,22 @@ export const AuthProvider = ({ children }) => {
     throw new Error(res?.message || 'Verification failed');
   };
 
-  // Resend OTP
-  const resendOtp = async (email) => {
+  // 3. Resend Signup Verification OTP
+  const resendSignupOtp = async (email) => {
     const trimmedEmail = email.trim().toLowerCase();
-    const res = await api.auth.resendOtp({ email: trimmedEmail });
+    const res = await api.auth.resendRegistrationOtp({ email: trimmedEmail });
     return res;
   };
 
-  // 1-Click Demo Login
-  const loginDemo = () => {
-    removeToken();
-    const demoUser = {
-      uid: "demo-user",
-      email: "demo@memorymap.com",
-      displayName: "Guest Adventurer",
-      isDemo: true
-    };
-    localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
-    setCurrentUser(demoUser);
-    return demoUser;
-  };
-
-  // Login (Password / Demo fallback)
+  // 4. Standard Login with Email + Password (NO OTP needed!)
   const login = async (email, password) => {
     const trimmedEmail = email.trim().toLowerCase();
 
-    // 1. Permanent Demo Mode Login (Guest Adventurer)
+    // 1-Click Permanent Demo Login
     if (trimmedEmail === "demo@memorymap.com" || trimmedEmail === "demo@photoflow.app") {
       return loginDemo();
     }
 
-    // 2. Real JWT Backend Login
     try {
       const res = await api.auth.login({
         email: trimmedEmail,
@@ -155,15 +147,61 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout
+  // 5. Forgot Password: Send 6-Digit OTP to Email
+  const forgotPassword = async (email) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const res = await api.auth.forgotPassword({ email: trimmedEmail });
+    return res;
+  };
+
+  // 6. Reset Password: Verify OTP and Set New Password
+  const resetPassword = async (email, otp, newPassword) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const res = await api.auth.resetPassword({
+      email: trimmedEmail,
+      otp: otp.trim(),
+      newPassword
+    });
+
+    if (res?.success && res.token && res.user) {
+      setToken(res.token);
+      localStorage.removeItem(DEMO_USER_KEY);
+
+      const realUser = {
+        uid: res.user.uid,
+        displayName: res.user.displayName,
+        email: res.user.email,
+        isDemo: false
+      };
+      setCurrentUser(realUser);
+      return realUser;
+    }
+    return res;
+  };
+
+  // 7. Instant Demo Mode (1-Click)
+  const loginDemo = () => {
+    removeToken();
+    const demoUser = {
+      uid: "demo-user",
+      email: "demo@memorymap.com",
+      displayName: "Guest Adventurer",
+      isDemo: true
+    };
+    localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
+    setCurrentUser(demoUser);
+    return demoUser;
+  };
+
+  // 8. Logout
   const logout = async () => {
     removeToken();
     localStorage.removeItem(DEMO_USER_KEY);
     setCurrentUser(null);
   };
 
-  // Update Profile
-  const updateUserProfile = async ({ displayName }) => {
+  // 9. Update User Profile
+  const updateUserProfile = async ({ displayName, currentPassword, newPassword }) => {
     if (currentUser?.isDemo) {
       const updatedDemo = {
         ...currentUser,
@@ -174,7 +212,7 @@ export const AuthProvider = ({ children }) => {
       return updatedDemo;
     }
 
-    const res = await api.auth.updateProfile({ displayName });
+    const res = await api.auth.updateProfile({ displayName, currentPassword, newPassword });
 
     if (res?.success && res.user) {
       const updatedUser = {
@@ -192,11 +230,13 @@ export const AuthProvider = ({ children }) => {
     currentUser,
     loading,
     isDemoMode: Boolean(currentUser?.isDemo),
-    sendOtp,
-    verifyOtp,
-    resendOtp,
-    loginDemo,
+    signup,
+    verifySignupOtp,
+    resendSignupOtp,
     login,
+    forgotPassword,
+    resetPassword,
+    loginDemo,
     logout,
     updateUserProfile
   };
