@@ -80,7 +80,15 @@ async function request(endpoint, options = {}) {
 
 export const api = {
   auth: {
-    register: (payload) => request('/auth/register', {
+    sendOtp: (payload) => request('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+    verifyOtp: (payload) => request('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+    resendOtp: (payload) => request('/auth/resend-otp', {
       method: 'POST',
       body: JSON.stringify(payload)
     }),

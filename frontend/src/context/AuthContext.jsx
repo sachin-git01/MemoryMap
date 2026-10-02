@@ -70,51 +70,62 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  // Direct JWT Signup
-  const signup = async (email, password, displayName) => {
-    try {
-      const res = await api.auth.register({
-        displayName: displayName || email.split('@')[0],
-        email: email.trim().toLowerCase(),
-        password
-      });
-
-      if (res?.success && res.token && res.user) {
-        setToken(res.token);
-        localStorage.removeItem(DEMO_USER_KEY);
-
-        const realUser = {
-          uid: res.user.uid,
-          displayName: res.user.displayName,
-          email: res.user.email,
-          isDemo: false
-        };
-        setCurrentUser(realUser);
-        return realUser;
-      }
-      throw new Error(res?.message || 'Failed to create account');
-    } catch (err) {
-      console.error('[Auth Signup Error]:', err);
-      throw err;
-    }
+  // Send OTP
+  const sendOtp = async (email, displayName) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const res = await api.auth.sendOtp({ email: trimmedEmail, displayName });
+    return res;
   };
 
-  // Login
+  // Verify OTP & Log In
+  const verifyOtp = async (email, otp) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const res = await api.auth.verifyOtp({ email: trimmedEmail, otp: otp.trim() });
+
+    if (res?.success && res.token && res.user) {
+      setToken(res.token);
+      localStorage.removeItem(DEMO_USER_KEY);
+
+      const realUser = {
+        uid: res.user.uid,
+        displayName: res.user.displayName,
+        email: res.user.email,
+        isDemo: false
+      };
+      setCurrentUser(realUser);
+      return realUser;
+    }
+    throw new Error(res?.message || 'Verification failed');
+  };
+
+  // Resend OTP
+  const resendOtp = async (email) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const res = await api.auth.resendOtp({ email: trimmedEmail });
+    return res;
+  };
+
+  // 1-Click Demo Login
+  const loginDemo = () => {
+    removeToken();
+    const demoUser = {
+      uid: "demo-user",
+      email: "demo@memorymap.com",
+      displayName: "Guest Adventurer",
+      isDemo: true
+    };
+    localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
+    setCurrentUser(demoUser);
+    return demoUser;
+  };
+
+  // Login (Password / Demo fallback)
   const login = async (email, password) => {
     const trimmedEmail = email.trim().toLowerCase();
 
     // 1. Permanent Demo Mode Login (Guest Adventurer)
     if (trimmedEmail === "demo@memorymap.com" || trimmedEmail === "demo@photoflow.app") {
-      removeToken();
-      const demoUser = {
-        uid: "demo-user",
-        email: "demo@memorymap.com",
-        displayName: "Guest Adventurer",
-        isDemo: true
-      };
-      localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
-      setCurrentUser(demoUser);
-      return demoUser;
+      return loginDemo();
     }
 
     // 2. Real JWT Backend Login
@@ -152,7 +163,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Update Profile
-  const updateUserProfile = async ({ displayName, currentPassword, newPassword }) => {
+  const updateUserProfile = async ({ displayName }) => {
     if (currentUser?.isDemo) {
       const updatedDemo = {
         ...currentUser,
@@ -163,11 +174,7 @@ export const AuthProvider = ({ children }) => {
       return updatedDemo;
     }
 
-    const res = await api.auth.updateProfile({
-      displayName,
-      currentPassword,
-      newPassword
-    });
+    const res = await api.auth.updateProfile({ displayName });
 
     if (res?.success && res.user) {
       const updatedUser = {
@@ -185,7 +192,10 @@ export const AuthProvider = ({ children }) => {
     currentUser,
     loading,
     isDemoMode: Boolean(currentUser?.isDemo),
-    signup,
+    sendOtp,
+    verifyOtp,
+    resendOtp,
+    loginDemo,
     login,
     logout,
     updateUserProfile
