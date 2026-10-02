@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useRouteJourney } from '../hooks/useRouteJourney';
 import { useThemeSettings } from '../context/ThemeProvider';
@@ -8,7 +9,7 @@ import { getIcon } from '../utils/icons';
 const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024;
 
 export const CheckpointDetails = () => {
-  const { checkpointId } = useParams();
+  const { checkpointId, journeyId: routeJourneyId } = useParams();
   const navigate = useNavigate();
   const {
     activeJourney: currentJourney,
@@ -16,6 +17,7 @@ export const CheckpointDetails = () => {
     updateCheckpoint,
     deleteCheckpoint,
     uploadPhoto,
+    uploadPhotos,
     isResolvingJourney,
     journeyNotFound
   } = useRouteJourney();
@@ -53,6 +55,37 @@ export const CheckpointDetails = () => {
   const [thumbScrollLeft, setThumbScrollLeft] = useState(0);
   
   const headerFileInputRef = useRef(null);
+
+  // Lock body scroll and handle keyboard shortcuts when Lightbox is open
+  useEffect(() => {
+    if (!isZoomOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsZoomOpen(false);
+      } else if (e.key === 'ArrowLeft' && checkpoint?.photos?.length > 1) {
+        const currentIdx = checkpoint.photos.indexOf(activePhoto);
+        const prevIdx = (currentIdx - 1 + checkpoint.photos.length) % checkpoint.photos.length;
+        setActivePhoto(checkpoint.photos[prevIdx]);
+        setZoomScale(1);
+        setPanOffset({ x: 0, y: 0 });
+      } else if (e.key === 'ArrowRight' && checkpoint?.photos?.length > 1) {
+        const currentIdx = checkpoint.photos.indexOf(activePhoto);
+        const nextIdx = (currentIdx + 1) % checkpoint.photos.length;
+        setActivePhoto(checkpoint.photos[nextIdx]);
+        setZoomScale(1);
+        setPanOffset({ x: 0, y: 0 });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isZoomOpen, activePhoto, checkpoint?.photos]);
 
   // Load checkpoint
   useEffect(() => {
@@ -159,8 +192,10 @@ export const CheckpointDetails = () => {
   const confirmDelete = async () => {
     setShowDeleteConfirm(false);
     try {
-      await deleteCheckpoint(currentJourney.id, checkpoint.id);
-      navigate(`/journey/${currentJourney.id}`);
+      const targetJourneyId = currentJourney?.id || currentJourney?._id || checkpoint?.journeyId || routeJourneyId;
+      const targetCheckpointId = checkpoint?.id || checkpoint?._id || checkpointId;
+      await deleteCheckpoint(targetJourneyId, targetCheckpointId);
+      navigate(`/journey/${targetJourneyId}`);
     } catch (err) {
       console.error("Deletion crashed with error:", err);
       setNotice({
@@ -175,8 +210,10 @@ export const CheckpointDetails = () => {
     if (!activePhoto) return;
     setShowPhotoDeleteConfirm(false);
     try {
-      const updatedPhotos = checkpoint.photos.filter(p => p !== activePhoto);
-      await updateCheckpoint(currentJourney.id, checkpoint.id, {
+      const targetJourneyId = currentJourney?.id || currentJourney?._id || checkpoint?.journeyId || routeJourneyId;
+      const targetCheckpointId = checkpoint?.id || checkpoint?._id || checkpointId;
+      const updatedPhotos = (checkpoint?.photos || []).filter(p => p !== activePhoto);
+      await updateCheckpoint(targetJourneyId, targetCheckpointId, {
         photos: updatedPhotos
       });
       setCheckpoint(prev => ({ ...prev, photos: updatedPhotos }));
@@ -200,8 +237,10 @@ export const CheckpointDetails = () => {
     setShowBatchPhotoDeleteConfirm(false);
     setIsMediaSelectMode(false);
     try {
-      const updatedPhotos = checkpoint.photos.filter(p => !selectedMedia.has(p));
-      await updateCheckpoint(currentJourney.id, checkpoint.id, {
+      const targetJourneyId = currentJourney?.id || currentJourney?._id || checkpoint?.journeyId || routeJourneyId;
+      const targetCheckpointId = checkpoint?.id || checkpoint?._id || checkpointId;
+      const updatedPhotos = (checkpoint?.photos || []).filter(p => !selectedMedia.has(p));
+      await updateCheckpoint(targetJourneyId, targetCheckpointId, {
         photos: updatedPhotos
       });
       setCheckpoint(prev => ({ ...prev, photos: updatedPhotos }));
@@ -284,17 +323,26 @@ export const CheckpointDetails = () => {
             accept="image/*,video/*"
             multiple
             onChange={async (e) => {
-              if (!e.target.files || e.target.files.length === 0) return;
+              const files = Array.from(e.target.files || []);
+              if (files.length === 0) return;
               setSaving(true);
+              setNotice(null);
+
               try {
-                const newUrls = [];
-                for (let i = 0; i < e.target.files.length; i++) {
-                  const file = e.target.files[i];
+                const targetJourneyId = currentJourney?.id || currentJourney?._id || checkpoint?.journeyId || routeJourneyId;
+                const targetCheckpointId = checkpoint?.id || checkpoint?._id || checkpointId;
+
+                if (!targetJourneyId || !targetCheckpointId) {
+                  throw new Error('Could not identify checkpoint or journey.');
+                }
+
+                const validFiles = [];
+                for (const file of files) {
                   if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
                     setNotice({
                       type: 'warning',
                       title: 'Unsupported file skipped',
-                      message: 'Only image and video files are supported.'
+                      message: `${file.name} is not an image or video.`
                     });
                     continue;
                   }
@@ -306,25 +354,46 @@ export const CheckpointDetails = () => {
                     });
                     continue;
                   }
-                  const url = await uploadPhoto(currentJourney.id, file);
-                  if (url) newUrls.push(url);
+                  validFiles.push(file);
                 }
+
+                if (validFiles.length === 0) {
+                  setSaving(false);
+                  return;
+                }
+
+                let newUrls = [];
+                if (typeof uploadPhotos === 'function') {
+                  newUrls = await uploadPhotos(targetJourneyId, validFiles);
+                } else {
+                  for (const file of validFiles) {
+                    const u = await uploadPhoto(targetJourneyId, file);
+                    if (u) newUrls.push(u);
+                  }
+                }
+
                 if (newUrls.length > 0) {
-                  const updatedPhotos = [...(checkpoint.photos || []), ...newUrls];
-                  await updateCheckpoint(currentJourney.id, checkpoint.id, {
+                  const currentPhotos = Array.isArray(checkpoint?.photos) ? checkpoint.photos : [];
+                  const updatedPhotos = [...currentPhotos, ...newUrls];
+                  await updateCheckpoint(targetJourneyId, targetCheckpointId, {
                     photos: updatedPhotos
                   });
                   setCheckpoint(prev => ({ ...prev, photos: updatedPhotos }));
                   if (!activePhoto) {
                     setActivePhoto(newUrls[0]);
                   }
+                  setNotice({
+                    type: 'success',
+                    title: 'Memories added',
+                    message: `${newUrls.length} file(s) added successfully.`
+                  });
                 }
               } catch (err) {
-                console.error(err);
+                console.error('[Multiple file upload error]:', err);
                 setNotice({
                   type: 'error',
                   title: 'Memories not added',
-                  message: 'Could not append these files to the checkpoint. Please try again.'
+                  message: err?.message || 'Could not append these files to the checkpoint. Please try again.'
                 });
               } finally {
                 setSaving(false);
@@ -641,8 +710,8 @@ export const CheckpointDetails = () => {
       )}
 
       {/* Custom Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+      {showDeleteConfirm && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-center space-y-4 animate-scale-up">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500 mx-auto text-xl animate-pulse">
               ⚠️
@@ -668,12 +737,13 @@ export const CheckpointDetails = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Custom Photo Delete Confirmation Modal */}
-      {showPhotoDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+      {showPhotoDeleteConfirm && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-center space-y-4 animate-scale-up">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500 mx-auto text-xl animate-pulse">
               🗑️
@@ -699,12 +769,13 @@ export const CheckpointDetails = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Custom Batch Photos Delete Confirmation Modal */}
-      {showBatchPhotoDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+      {showBatchPhotoDeleteConfirm && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-center space-y-4 animate-scale-up">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500 mx-auto text-xl animate-pulse">
               🗑️
@@ -730,25 +801,43 @@ export const CheckpointDetails = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Lightbox / Zoom Modal */}
-      {isZoomOpen && activePhoto && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-fade-in">
-          {/* Close button */}
-          <button
-            onClick={() => setIsZoomOpen(false)}
-            className="absolute top-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-all cursor-pointer text-lg font-bold"
-            title="Close Lightbox"
-          >
-            ✕
-          </button>
+      {/* Lightbox / Zoom Modal (Portaled directly to document.body to break free of sidebar/navbar stacking) */}
+      {isZoomOpen && activePhoto && createPortal(
+        <div 
+          className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-fade-in select-none"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsZoomOpen(false);
+            }
+          }}
+        >
+          {/* Top Header: Title & Close Button */}
+          <div className="fixed top-0 inset-x-0 z-[100000] flex items-center justify-between p-4 sm:p-6 pointer-events-none">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white/90 backdrop-blur-md border border-white/10 shadow-lg">
+              <span className="truncate max-w-[200px] sm:max-w-xs">{checkpoint?.title || 'Photo Preview'}</span>
+              {checkpoint?.photos && checkpoint.photos.length > 1 && (
+                <span className="text-white/60">
+                  ({checkpoint.photos.indexOf(activePhoto) + 1} / {checkpoint.photos.length})
+                </span>
+              )}
+            </div>
 
-
+            <button
+              onClick={() => setIsZoomOpen(false)}
+              className="pointer-events-auto flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-95 transition-all cursor-pointer text-xl font-bold shadow-2xl border border-white/20"
+              title="Close (Esc)"
+              aria-label="Close Lightbox"
+            >
+              ✕
+            </button>
+          </div>
 
           {/* Navigation Arrows inside Lightbox */}
-          {checkpoint.photos && checkpoint.photos.length > 1 && (
+          {checkpoint?.photos && checkpoint.photos.length > 1 && (
             <>
               <button
                 onClick={(e) => {
@@ -759,8 +848,9 @@ export const CheckpointDetails = () => {
                   setZoomScale(1);
                   setPanOffset({ x: 0, y: 0 });
                 }}
-                className="absolute left-6 top-1/2 -translate-y-1/2 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 hover:scale-105 transition-all cursor-pointer text-2xl font-bold shadow-lg border border-white/10"
-                title="Previous Photo"
+                className="fixed left-4 sm:left-6 top-1/2 -translate-y-1/2 z-[100000] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/30 hover:scale-105 active:scale-95 transition-all cursor-pointer text-2xl font-bold shadow-2xl border border-white/20"
+                title="Previous Photo (←)"
+                aria-label="Previous Photo"
               >
                 {getIcon('left', { size: 24 })}
               </button>
@@ -773,8 +863,9 @@ export const CheckpointDetails = () => {
                   setZoomScale(1);
                   setPanOffset({ x: 0, y: 0 });
                 }}
-                className="absolute right-6 top-1/2 -translate-y-1/2 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 hover:scale-105 transition-all cursor-pointer text-2xl font-bold shadow-lg border border-white/10"
-                title="Next Photo"
+                className="fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-[100000] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/30 hover:scale-105 active:scale-95 transition-all cursor-pointer text-2xl font-bold shadow-2xl border border-white/20"
+                title="Next Photo (→)"
+                aria-label="Next Photo"
               >
                 {getIcon('right', { size: 24 })}
               </button>
@@ -782,31 +873,31 @@ export const CheckpointDetails = () => {
           )}
 
           {/* Zoom Controls */}
-          <div className="absolute bottom-8 z-50 flex gap-4 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/10 shadow-lg select-none">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100000] flex items-center gap-3 sm:gap-4 bg-neutral-900/80 backdrop-blur-xl px-5 py-2 sm:px-6 sm:py-2.5 rounded-full border border-white/15 shadow-2xl select-none">
             <button
-              onClick={() => setZoomScale(prev => Math.max(0.5, prev - 0.25))}
-              className="text-white hover:text-sky-300 text-lg font-extrabold px-2 transition-colors cursor-pointer"
+              onClick={() => setZoomScale(prev => Math.max(0.5, Number((prev - 0.25).toFixed(2))))}
+              className="text-white/80 hover:text-white text-lg font-extrabold px-2 transition-colors cursor-pointer"
               title="Zoom Out"
             >
               －
             </button>
-            <span className="text-white text-xs font-bold self-center">
+            <span className="text-white text-xs font-bold self-center min-w-[3.5rem] text-center">
               {Math.round(zoomScale * 100)}%
             </span>
             <button
-              onClick={() => setZoomScale(prev => Math.min(4, prev + 0.25))}
-              className="text-white hover:text-sky-300 text-lg font-extrabold px-2 transition-colors cursor-pointer"
+              onClick={() => setZoomScale(prev => Math.min(4, Number((prev + 0.25).toFixed(2))))}
+              className="text-white/80 hover:text-white text-lg font-extrabold px-2 transition-colors cursor-pointer"
               title="Zoom In"
             >
               ＋
             </button>
-            <div className="w-px bg-white/10 self-stretch"></div>
+            <div className="w-px h-4 bg-white/20 self-center"></div>
             <button
               onClick={() => {
                 setZoomScale(1);
                 setPanOffset({ x: 0, y: 0 });
               }}
-              className="text-white hover:text-sky-300 text-xs font-semibold px-2 transition-colors cursor-pointer"
+              className="text-white/80 hover:text-white text-xs font-semibold px-2 transition-colors cursor-pointer"
               title="Reset"
             >
               Reset
@@ -815,8 +906,9 @@ export const CheckpointDetails = () => {
 
           {/* Photo Display Window */}
           <div 
-            className="relative w-full h-[80vh] flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing select-none"
+            className="relative w-full h-[82vh] flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing select-none"
             onMouseDown={(e) => {
+              if (e.button !== 0) return;
               setIsDragging(true);
               setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
             }}
@@ -829,17 +921,19 @@ export const CheckpointDetails = () => {
             }}
             onMouseUp={() => setIsDragging(false)}
             onMouseLeave={() => setIsDragging(false)}
+            onClick={(e) => e.stopPropagation()}
           >
             <img
               src={activePhoto}
-              alt="Zoomed memory preview"
-              className="max-h-full max-w-full object-contain pointer-events-none transition-transform duration-100 ease-out"
+              alt={checkpoint?.title || 'Zoomed memory preview'}
+              className="max-h-full max-w-full object-contain pointer-events-none transition-transform duration-75 ease-out drop-shadow-2xl"
               style={{
                 transform: `scale(${zoomScale}) translate(${panOffset.x / zoomScale}px, ${panOffset.y / zoomScale}px)`
               }}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       </div>

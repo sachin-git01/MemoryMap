@@ -9,41 +9,15 @@ import {
 
 const JourneyContext = createContext(null);
 
-const LOCAL_JOURNEYS_KEY = "memorymap_demo_journeys";
-const LOCAL_CHECKPOINTS_KEY = "memorymap_demo_checkpoints";
-const LOCAL_NOTES_KEY = "memorymap_demo_notes";
-
-const readLocalArray = (key, fallback) => {
-  if (typeof window === 'undefined') return fallback;
-  const stored = localStorage.getItem(key);
-  if (!stored) return fallback;
-  try {
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const writeLocalArray = (key, data) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(key, JSON.stringify(data));
-};
-
-const loadDemoJourneys = () => {
-  if (typeof window === 'undefined') return [];
-  const stored = localStorage.getItem(LOCAL_JOURNEYS_KEY);
-  if (!stored) {
-    localStorage.setItem(LOCAL_JOURNEYS_KEY, JSON.stringify(MOCK_JOURNEYS));
-    return MOCK_JOURNEYS;
-  }
-  try {
-    const parsed = JSON.parse(stored);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-  } catch {}
-  localStorage.setItem(LOCAL_JOURNEYS_KEY, JSON.stringify(MOCK_JOURNEYS));
-  return MOCK_JOURNEYS;
-};
+// Clean up any old persistent demo keys from localStorage so demo mode is 100% ephemeral
+if (typeof window !== 'undefined') {
+  localStorage.removeItem("memorymap_demo_journeys");
+  localStorage.removeItem("memorymap_demo_checkpoints");
+  localStorage.removeItem("memorymap_demo_notes");
+  localStorage.removeItem("photoflow_demo_journeys");
+  localStorage.removeItem("photoflow_demo_checkpoints");
+  localStorage.removeItem("photoflow_demo_notes");
+}
 
 export const useJourney = () => {
   const context = useContext(JourneyContext);
@@ -53,8 +27,13 @@ export const useJourney = () => {
 
 export const JourneyProvider = ({ children }) => {
   const { currentUser } = useAuth();
+
+  // In-Memory Demo Collections (RAM only - resets to pristine mockData on page refresh)
+  const [demoCheckpoints, setDemoCheckpoints] = useState(() => JSON.parse(JSON.stringify(MOCK_CHECKPOINTS)));
+  const [demoNotes, setDemoNotes] = useState(() => JSON.parse(JSON.stringify(MOCK_NOTES)));
+
   const [journeys, setJourneys] = useState(() => (
-    currentUser?.isDemo ? loadDemoJourneys() : []
+    currentUser?.isDemo ? JSON.parse(JSON.stringify(MOCK_JOURNEYS)) : []
   ));
   const [selectedJourneyId, setSelectedJourneyId] = useState(null);
   const [currentJourney, setCurrentJourney] = useState(null);
@@ -85,10 +64,12 @@ export const JourneyProvider = ({ children }) => {
 
     if (currentUser.isDemo) {
       // ----------------------------------------------------
-      // DEMO MODE: Guaranteed 4 Default Journeys
+      // DEMO MODE: In-Memory Only (Resets on Refresh)
       // ----------------------------------------------------
-      const demoJourneys = loadDemoJourneys();
-      setJourneys(demoJourneys);
+      const initialMock = JSON.parse(JSON.stringify(MOCK_JOURNEYS));
+      setJourneys(initialMock);
+      setDemoCheckpoints(JSON.parse(JSON.stringify(MOCK_CHECKPOINTS)));
+      setDemoNotes(JSON.parse(JSON.stringify(MOCK_NOTES)));
       setLoading(false);
       setHasLoaded(true);
     } else {
@@ -130,24 +111,14 @@ export const JourneyProvider = ({ children }) => {
 
     if (currentUser.isDemo) {
       // ----------------------------------------------------
-      // DEMO MODE: Local Storage
+      // DEMO MODE: In-Memory Filter (Never in localStorage)
       // ----------------------------------------------------
-      let allCp = readLocalArray(LOCAL_CHECKPOINTS_KEY, MOCK_CHECKPOINTS);
-      if (allCp.length === 0) {
-        localStorage.setItem(LOCAL_CHECKPOINTS_KEY, JSON.stringify(MOCK_CHECKPOINTS));
-        allCp = MOCK_CHECKPOINTS;
-      }
-      const filteredCp = allCp
+      const filteredCp = demoCheckpoints
         .filter(cp => cp.journeyId === currentJourney.id)
         .sort((a, b) => new Date(a.date) - new Date(b.date));
       setCheckpoints(filteredCp);
 
-      let allNotes = readLocalArray(LOCAL_NOTES_KEY, MOCK_NOTES);
-      if (allNotes.length === 0) {
-        localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(MOCK_NOTES));
-        allNotes = MOCK_NOTES;
-      }
-      const filteredNotes = allNotes
+      const filteredNotes = demoNotes
         .filter(n => n.journeyId === currentJourney.id)
         .sort((a, b) => new Date(b.date) - new Date(a.date));
       setNotes(filteredNotes);
@@ -174,14 +145,14 @@ export const JourneyProvider = ({ children }) => {
         isMounted = false;
       };
     }
-  }, [currentJourney, currentUser]);
+  }, [currentJourney, currentUser, demoCheckpoints, demoNotes]);
 
   // Create Journey
   const createJourney = async (journeyData) => {
     if (!currentUser) return;
 
     if (currentUser.isDemo) {
-      // Demo Mode
+      // Demo Mode: In-Memory Only
       const localId = `journey-${Date.now()}`;
       const newJourney = {
         id: localId,
@@ -197,10 +168,7 @@ export const JourneyProvider = ({ children }) => {
         customColors: journeyData.customColors,
         createdAt: new Date().toISOString()
       };
-      const currentLocal = readLocalArray(LOCAL_JOURNEYS_KEY, []);
-      const updated = [newJourney, ...currentLocal];
-      writeLocalArray(LOCAL_JOURNEYS_KEY, updated);
-      setJourneys(updated);
+      setJourneys(prev => [newJourney, ...prev]);
       setSelectedJourneyId(localId);
       setCurrentJourney(newJourney);
       return localId;
@@ -231,10 +199,7 @@ export const JourneyProvider = ({ children }) => {
   // Update Journey
   const updateJourney = async (journeyId, updatedData) => {
     if (currentUser?.isDemo) {
-      const currentLocal = readLocalArray(LOCAL_JOURNEYS_KEY, []);
-      const updated = currentLocal.map(j => j.id === journeyId ? { ...j, ...updatedData } : j);
-      writeLocalArray(LOCAL_JOURNEYS_KEY, updated);
-      setJourneys(updated);
+      setJourneys(prev => prev.map(j => j.id === journeyId ? { ...j, ...updatedData } : j));
       if (currentJourney?.id === journeyId) {
         setCurrentJourney(prev => ({ ...prev, ...updatedData }));
       }
@@ -252,15 +217,9 @@ export const JourneyProvider = ({ children }) => {
   // Delete Journey
   const deleteJourney = async (journeyId) => {
     if (currentUser?.isDemo) {
-      const updated = journeys.filter(j => j.id !== journeyId);
-      writeLocalArray(LOCAL_JOURNEYS_KEY, updated);
-      setJourneys(updated);
-
-      const localCp = readLocalArray(LOCAL_CHECKPOINTS_KEY, []);
-      writeLocalArray(LOCAL_CHECKPOINTS_KEY, localCp.filter(c => c.journeyId !== journeyId));
-
-      const localNotes = readLocalArray(LOCAL_NOTES_KEY, []);
-      writeLocalArray(LOCAL_NOTES_KEY, localNotes.filter(n => n.journeyId !== journeyId));
+      setJourneys(prev => prev.filter(j => j.id !== journeyId));
+      setDemoCheckpoints(prev => prev.filter(c => c.journeyId !== journeyId));
+      setDemoNotes(prev => prev.filter(n => n.journeyId !== journeyId));
     } else {
       await api.journeys.delete(journeyId);
       setJourneys(prev => prev.filter(j => j.id !== journeyId));
@@ -293,10 +252,7 @@ export const JourneyProvider = ({ children }) => {
         notes: checkpointData.notes || "",
         createdAt: new Date().toISOString()
       };
-      const allCp = readLocalArray(LOCAL_CHECKPOINTS_KEY, []);
-      const updated = [...allCp, newCp];
-      writeLocalArray(LOCAL_CHECKPOINTS_KEY, updated);
-      setCheckpoints(updated.filter(cp => cp.journeyId === journeyId).sort((a, b) => new Date(a.date) - new Date(b.date)));
+      setDemoCheckpoints(prev => [...prev, newCp]);
       return localId;
     } else {
       const res = await api.checkpoints.create(journeyId, {
@@ -320,10 +276,7 @@ export const JourneyProvider = ({ children }) => {
   // Update Checkpoint
   const updateCheckpoint = async (journeyId, checkpointId, updatedData) => {
     if (currentUser?.isDemo) {
-      const allCp = readLocalArray(LOCAL_CHECKPOINTS_KEY, []);
-      const updated = allCp.map(c => c.id === checkpointId ? { ...c, ...updatedData } : c);
-      writeLocalArray(LOCAL_CHECKPOINTS_KEY, updated);
-      setCheckpoints(updated.filter(cp => cp.journeyId === journeyId).sort((a, b) => new Date(a.date) - new Date(b.date)));
+      setDemoCheckpoints(prev => prev.map(c => c.id === checkpointId ? { ...c, ...updatedData } : c));
     } else {
       const res = await api.checkpoints.update(journeyId, checkpointId, updatedData);
       if (res?.success && res.checkpoint) {
@@ -335,10 +288,7 @@ export const JourneyProvider = ({ children }) => {
   // Delete Checkpoint
   const deleteCheckpoint = async (journeyId, checkpointId) => {
     if (currentUser?.isDemo) {
-      const allCp = readLocalArray(LOCAL_CHECKPOINTS_KEY, []);
-      const updated = allCp.filter(c => c.id !== checkpointId);
-      writeLocalArray(LOCAL_CHECKPOINTS_KEY, updated);
-      setCheckpoints(updated.filter(cp => cp.journeyId === journeyId));
+      setDemoCheckpoints(prev => prev.filter(c => c.id !== checkpointId));
     } else {
       await api.checkpoints.delete(journeyId, checkpointId);
       setCheckpoints(prev => prev.filter(c => c.id !== checkpointId));
@@ -361,10 +311,7 @@ export const JourneyProvider = ({ children }) => {
         category: noteData.category || "General",
         createdAt: new Date().toISOString()
       };
-      const allNotes = readLocalArray(LOCAL_NOTES_KEY, []);
-      const updated = [newNote, ...allNotes];
-      writeLocalArray(LOCAL_NOTES_KEY, updated);
-      setNotes(updated.filter(n => n.journeyId === journeyId).sort((a, b) => new Date(b.date) - new Date(a.date)));
+      setDemoNotes(prev => [newNote, ...prev]);
       return localId;
     } else {
       const res = await api.notes.create(journeyId, {
@@ -385,10 +332,7 @@ export const JourneyProvider = ({ children }) => {
   // Update Note
   const updateNote = async (journeyId, noteId, updatedData) => {
     if (currentUser?.isDemo) {
-      const allNotes = readLocalArray(LOCAL_NOTES_KEY, []);
-      const updated = allNotes.map(n => n.id === noteId ? { ...n, ...updatedData } : n);
-      writeLocalArray(LOCAL_NOTES_KEY, updated);
-      setNotes(updated.filter(n => n.journeyId === journeyId).sort((a, b) => new Date(b.date) - new Date(a.date)));
+      setDemoNotes(prev => prev.map(n => n.id === noteId ? { ...n, ...updatedData } : n));
     } else {
       const res = await api.notes.update(journeyId, noteId, updatedData);
       if (res?.success && res.note) {
@@ -400,31 +344,70 @@ export const JourneyProvider = ({ children }) => {
   // Delete Note
   const deleteNote = async (journeyId, noteId) => {
     if (currentUser?.isDemo) {
-      const allNotes = readLocalArray(LOCAL_NOTES_KEY, []);
-      const updated = allNotes.filter(n => n.id !== noteId);
-      writeLocalArray(LOCAL_NOTES_KEY, updated);
-      setNotes(updated.filter(n => n.journeyId === journeyId).sort((a, b) => new Date(b.date) - new Date(a.date)));
+      setDemoNotes(prev => prev.filter(n => n.id !== noteId));
     } else {
       await api.notes.delete(journeyId, noteId);
       setNotes(prev => prev.filter(n => n.id !== noteId));
     }
   };
 
-  // Upload Photo File (Permanent Storage)
+  // Upload Single Photo File
   const uploadPhoto = async (_journeyId, file) => {
-    if (!currentUser) return null;
+    if (!currentUser || !file) return null;
     const isVideo = file.type.startsWith('video/');
 
     if (currentUser.isDemo) {
-      // Temporary Blob URL for Demo Mode
+      // In-Memory Blob URL only - disappears completely on refresh
       return URL.createObjectURL(file) + (isVideo ? "#video" : "");
     } else {
-      // Permanent Storage on Express Backend via Multer
+      // Permanent Storage on Express Backend via Multer / Cloudinary
       const res = await api.upload.file(file);
       if (res?.success && res.url) {
         return res.url;
       }
       throw new Error(res?.message || 'Photo upload failed');
+    }
+  };
+
+  // Upload Multiple Photo Files (Batch Upload)
+  const uploadPhotos = async (_journeyId, files) => {
+    if (!currentUser) return [];
+    const fileList = Array.from(files || []);
+    if (fileList.length === 0) return [];
+
+    if (currentUser.isDemo) {
+      // In-Memory Blob URLs only - disappears completely on refresh
+      return fileList.map(file => {
+        const isVideo = file.type.startsWith('video/');
+        return URL.createObjectURL(file) + (isVideo ? "#video" : "");
+      });
+    } else {
+      // 1. Try parallel batch upload endpoint first
+      try {
+        const res = await api.upload.multiple(fileList);
+        if (res?.success && Array.isArray(res.urls) && res.urls.length > 0) {
+          return res.urls;
+        }
+        if (res?.success && Array.isArray(res.files) && res.files.length > 0) {
+          return res.files.map(f => f.url);
+        }
+      } catch (multipleErr) {
+        console.warn('[uploadPhotos multiple endpoint failed, falling back to individual uploads]:', multipleErr.message);
+      }
+
+      // 2. Fallback: upload each file individually
+      const results = [];
+      for (const f of fileList) {
+        try {
+          const res = await api.upload.file(f);
+          if (res?.success && res.url) {
+            results.push(res.url);
+          }
+        } catch (singleErr) {
+          console.error(`[Upload single file error on ${f.name}]:`, singleErr.message);
+        }
+      }
+      return results;
     }
   };
 
@@ -454,6 +437,7 @@ export const JourneyProvider = ({ children }) => {
     updateNote,
     deleteNote,
     uploadPhoto,
+    uploadPhotos,
     selectJourney,
     setCurrentJourney
   };

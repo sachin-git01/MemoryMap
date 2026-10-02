@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useRouteJourney } from '../hooks/useRouteJourney';
 import { useThemeSettings } from '../context/ThemeProvider';
@@ -369,8 +370,8 @@ export const JourneyMapPage = () => {
       )}
 
       {/* Single Delete Modal */}
-      {checkpointToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+      {checkpointToDelete && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-center space-y-4 animate-scale-up">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500">
               {getIcon('trash', { size: 20 })}
@@ -396,12 +397,13 @@ export const JourneyMapPage = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Batch Delete Modal */}
-      {showBatchDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+      {showBatchDeleteConfirm && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-center space-y-4 animate-scale-up">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500">
               {getIcon('trash', { size: 20 })}
@@ -427,7 +429,8 @@ export const JourneyMapPage = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

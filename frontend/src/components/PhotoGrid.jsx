@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { getIcon } from '../utils/icons';
 
@@ -6,8 +7,11 @@ export const PhotoGrid = ({ photos, journeyId }) => {
   const [activePhotoIdx, setActivePhotoIdx] = useState(null);
   const navigate = useNavigate();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (activePhotoIdx === null) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowRight') {
         setActivePhotoIdx((prev) => (prev + 1) % photos.length);
@@ -18,7 +22,10 @@ export const PhotoGrid = ({ photos, journeyId }) => {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [activePhotoIdx, photos.length]);
 
   const checkIsVideo = (url) => {
@@ -96,26 +103,26 @@ export const PhotoGrid = ({ photos, journeyId }) => {
         ))}
       </div>
 
-      {currentPhoto && (
+      {currentPhoto && createPortal(
         <div
           onClick={closeLightbox}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-4 animate-fade-in backdrop-blur-sm"
+          className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-black/95 p-4 animate-fade-in backdrop-blur-md select-none"
         >
           <button
             onClick={closeLightbox}
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-3 text-white transition-all hover:scale-105 hover:bg-white/20"
+            className="fixed top-5 right-5 sm:top-6 sm:right-6 z-[100000] flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-95 transition-all cursor-pointer text-xl font-bold shadow-2xl border border-white/20"
             aria-label="Close preview"
+            title="Close (Esc)"
           >
-            {getIcon('close', { size: 20 })}
+            ✕
           </button>
-
-
 
           {photos.length > 1 && (
             <button
               onClick={prevPhoto}
-              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white transition-all hover:scale-105 hover:bg-white/20"
+              className="fixed left-4 sm:left-6 top-1/2 -translate-y-1/2 z-[100000] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/30 hover:scale-105 active:scale-95 transition-all cursor-pointer text-2xl font-bold shadow-2xl border border-white/20"
               aria-label="Previous photo"
+              title="Previous Photo (←)"
             >
               {getIcon('left', { size: 24 })}
             </button>
@@ -147,8 +154,9 @@ export const PhotoGrid = ({ photos, journeyId }) => {
           {photos.length > 1 && (
             <button
               onClick={nextPhoto}
-              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white transition-all hover:scale-105 hover:bg-white/20"
+              className="fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-[100000] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/30 hover:scale-105 active:scale-95 transition-all cursor-pointer text-2xl font-bold shadow-2xl border border-white/20"
               aria-label="Next photo"
+              title="Next Photo (→)"
             >
               {getIcon('right', { size: 24 })}
             </button>
@@ -180,7 +188,8 @@ export const PhotoGrid = ({ photos, journeyId }) => {
               </button>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
